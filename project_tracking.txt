@@ -1,0 +1,23 @@
+SELECT
+    poi.item_code AS Model,
+    poi.warehouse AS Warehouse,
+    po.name AS PO_Number,
+    po.custom_shipment AS Project,
+    (poi.qty - poi.received_qty) AS Remaining_Qty,
+    po.schedule_date AS Expected_Date
+
+FROM
+    `tabPurchase Order Item` poi
+
+INNER JOIN
+    `tabPurchase Order` po
+    ON po.name = poi.parent
+
+WHERE
+    po.docstatus = 1
+    AND poi.qty > poi.received_qty
+
+ORDER BY
+    poi.item_code,
+    poi.warehouse,
+    po.schedule_date

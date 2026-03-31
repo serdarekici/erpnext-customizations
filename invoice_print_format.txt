@@ -1,0 +1,379 @@
+{%- macro add_header(page_num, max_pages, doc, letter_head, no_letterhead, footer, print_settings=None, print_heading_template=None) -%}
+
+{% if letter_head and not no_letterhead %}
+<div class="letter-head">{{ letter_head }}</div>
+{% endif %}
+
+{% if print_heading_template %}
+{{ frappe.render_template(print_heading_template, {"doc":doc}) }}
+{% endif %}
+
+{%- endmacro -%}
+
+{% for page in layout %}
+
+<div class="page-break invoice-page">
+
+<div {% if print_settings.repeat_header_footer %} id="header-html" class="hidden-pdf" {% endif %}>
+{{ add_header(loop.index, layout|len, doc, letter_head, no_letterhead, footer, print_settings) }}
+</div>
+
+<style>
+
+.invoice-page{
+font-family:Inter,sans-serif;
+color:#171717;
+}
+
+.print-format-body{
+padding:30px 12px 60px 12px !important;
+}
+
+.title{
+color:#7c7c7c !important;
+font-weight:600;
+margin-bottom:8px;
+}
+
+.address-block{
+width:50%;
+float:left;
+}
+
+.items-table{
+width:100%;
+border-collapse:separate;
+border-spacing:0;
+margin-top:30px;
+}
+
+.items-table td{
+border-bottom:1px solid #ededed;
+padding:8px;
+}
+
+.clearfix{
+clear:both;
+}
+
+/* DELIVERY TERMS BLOCK */
+
+.delivery-block{
+margin-top:2px;
+font-size:11px;
+line-height:1.5;
+page-break-inside: avoid;
+break-inside: avoid;
+}
+
+
+.delivery-title{
+margin-top:2px;
+margin-bottom:0px;
+}
+
+/* FOOTER */
+
+.footer-block{
+margin-top:4px;
+page-break-inside: avoid;
+break-inside: avoid;
+}
+
+.footer-left{
+float:left;
+width:50%;
+font-size:13px;
+line-height:1.5;
+}
+
+.footer-right{
+float:right;
+width:50%;
+font-size:13px;
+line-height:1.5;
+text-align:left;
+}
+
+.footer-label{
+font-weight:600;
+}
+
+</style>
+
+<div class="print-format-body">
+
+<!-- CUSTOMER + INVOICE INFO -->
+
+<table style="width:100%; margin-bottom:20px;">
+<tr>
+
+<td style="width:50%;">
+
+<div><b>Customer Name:</b></div>
+<div>{{ doc.customer_name }}</div>
+
+{% if doc.contact_person %}
+    {% set contact = frappe.get_doc("Contact", doc.contact_person) %}
+    <div style="margin-top:0px;">
+        <b>Contact:</b> {{ contact.first_name }} {{ contact.last_name }}
+        {% if contact.email_ids %}
+            <br><b>Email:</b>&nbsp;{{ contact.email_ids[0].email_id }}
+        {% endif %}
+    </div>
+{% endif %}
+
+{% if doc.custom_po_number %}
+    <div style="margin-top:4px;">
+        <b>PO Number:</b> {{ doc.custom_po_number }}
+    </div>
+{% endif %}
+
+</td>
+
+<td style="width:50%; text-align:right;">
+
+<div><b>Invoice Number:</b> {{ doc.name }}</div>
+<div><b>Invoice Date:</b> {{ frappe.utils.format_date(doc.posting_date) }}</div>
+<div><b>Payment Due Date:</b> {{ frappe.utils.format_date(doc.due_date) }}</div>
+
+</td>
+
+</tr>
+</table>
+
+
+<!-- BILL TO + SHIP TO -->
+
+<div class="address-block">
+
+<div class="title">Bill To</div>
+
+{% if doc.customer_address %}
+
+{% set customer_address = frappe.db.get_value(
+"Address",
+doc.customer_address,
+["address_line1","address_line2","city","state","pincode","country"],
+as_dict=True
+) %}
+
+<div>{{ customer_address.address_line1 }}</div>
+
+{% if customer_address.address_line2 %}
+<div>{{ customer_address.address_line2 }}</div>
+{% endif %}
+
+<div>
+{{ customer_address.city }}
+{{ customer_address.state }}
+{{ customer_address.pincode }}
+</div>
+
+<div>{{ customer_address.country }}</div>
+
+{% endif %}
+
+</div>
+
+
+<div class="address-block">
+
+<div class="title">Ship To</div>
+
+{% if doc.shipping_address_name %}
+
+{% set shipping_address = frappe.db.get_value(
+"Address",
+doc.shipping_address_name,
+["address_line1","address_line2","city","state","pincode","country"],
+as_dict=True
+) %}
+
+<div>{{ shipping_address.address_line1 }}</div>
+
+{% if shipping_address.address_line2 %}
+<div>{{ shipping_address.address_line2 }}</div>
+{% endif %}
+
+<div>
+{{ shipping_address.city }}
+{{ shipping_address.state }}
+{{ shipping_address.pincode }}
+</div>
+
+<div>{{ shipping_address.country }}</div>
+
+{% endif %}
+
+</div>
+
+<div class="clearfix"></div>
+
+
+<!-- ITEMS -->
+
+<table class="items-table">
+
+<thead>
+
+<tr>
+<td><b>No</b></td>
+<td><b>Item</b></td>
+<td><b>Quantity</b></td>
+<td><b>Rate</b></td>
+<td><b>Amount</b></td>
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for item in doc.items %}
+
+<tr>
+
+<td>{{ loop.index }}</td>
+
+<td>
+
+{% if item.image %}
+<img src="{{ item.image }}" style="height:24px;width:24px;margin-right:8px;">
+{% endif %}
+
+<b>{{ item.item_code }}</b>: {{ item.item_name }}
+
+</td>
+
+<td>{{ item.get_formatted("qty") }}</td>
+
+<td>${{ "{:,.2f}".format(item.rate) }}</td>
+<td>${{ "{:,.2f}".format(item.amount) }}</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+
+<!-- TOTAL -->
+
+<table style="width:100%; margin-top:20px;">
+
+<tr>
+<td style="text-align:right;">Sub Total</td>
+<td style="text-align:right;">{{ doc.get_formatted("total", doc) }}</td>
+</tr>
+
+<tr>
+<td style="text-align:right;">Sales Tax</td>
+<td style="text-align:right;">{{ doc.get_formatted("total_taxes_and_charges", doc) }}</td>
+</tr>
+
+<tr>
+<td style="text-align:right;"><b>Grand Total</b></td>
+<td style="text-align:right;"><b>{{ doc.get_formatted("grand_total", doc) }}</b></td>
+</tr>
+
+</table>
+
+
+{% if doc.custom_customer_pickup %}
+
+<div class="delivery-block">
+
+
+<div class="delivery-title">
+Delivery Terms:
+</div>
+
+<div>Transportation will be arranged by the buyer.</div>
+
+<div>
+Customer Pickup – Warehouse Location:
+</div>
+
+<div>727 Hylton Rd, Pennsauken, NJ 08110</div>
+
+<div>Phone: +1 (917) 415-5816</div>
+
+</div>
+
+{% endif %}
+
+</div>
+
+
+<!-- FOOTER -->
+
+<div class="footer-block">
+
+<div class="footer-left">
+
+<div class="footer-label">EIN: 92-146XXXX</div>
+
+<div style="margin-top:6px;">
+2B GLOBAL INC.<br>
+1044 Route 23 Suite:103<br>
+Wayne, NJ 07470<br>
+United States
+</div>
+
+</div>
+
+
+{% if doc.custom_bank_account %}
+
+{% set bank_name = frappe.db.get_value("Bank Account", doc.custom_bank_account, "bank") %}
+{% set account_no = frappe.db.get_value("Bank Account", doc.custom_bank_account, "bank_account_no") %}
+{% set routing = frappe.db.get_value("Bank Account", doc.custom_bank_account, "branch_code") %}
+{% set swift = frappe.db.get_value("Bank", bank_name, "swift_number") %}
+
+{% set bank_address_name = frappe.db.get_value(
+"Dynamic Link",
+{"link_doctype": "Bank", "link_name": bank_name},
+"parent"
+) %}
+
+{% set bank_address = frappe.db.get_value(
+"Address",
+bank_address_name,
+["address_line1","city","state","pincode"],
+as_dict=True
+) %}
+
+<div class="footer-right">
+
+<div class="footer-label">
+Bank: {{ bank_name }}
+</div>
+
+<div>Account Number: {{ account_no }}</div>
+
+<div>Routing Number (Wires): {{ routing }}</div>
+
+{% if swift %}
+<div>SWIFT Code (USD): {{ swift }}</div>
+{% endif %}
+
+{% if bank_address %}
+<div>
+Bank Address: {{ bank_address.address_line1 }},
+{{ bank_address.city }}, {{ bank_address.state }} {{ bank_address.pincode }}
+</div>
+{% endif %}
+
+</div>
+
+{% endif %}
+
+<div class="clearfix"></div>
+
+</div>
+
+</div>
+
+{% endfor %}
