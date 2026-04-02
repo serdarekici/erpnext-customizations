@@ -298,8 +298,6 @@ Customer Pickup – Warehouse Location:
 
 <div>727 Hylton Rd, Pennsauken, NJ 08110</div>
 
-<div>Phone: +1 (917) 415-5816</div>
-
 </div>
 
 {% endif %}
@@ -313,7 +311,7 @@ Customer Pickup – Warehouse Location:
 
 <div class="footer-left">
 
-<div class="footer-label">EIN: 92-146XXXX</div>
+<div class="footer-label">EIN: 92-1462976</div>
 
 <div style="margin-top:6px;">
 2B GLOBAL INC.<br>
