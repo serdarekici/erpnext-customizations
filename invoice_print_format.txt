@@ -280,6 +280,48 @@ as_dict=True
 
 </table>
 
+{% if doc.payment_schedule and doc.payment_schedule|length > 1 %}
+
+<table style="width:100%; margin-top:20px; border-top:1px solid #e0e0e0; padding-top:10px;">
+
+<tr>
+<td colspan="3" style="padding-bottom:8px;">
+    <b>Payment Schedule</b>
+</td>
+</tr>
+
+<tr>
+<td style="color:#666;"><b>Type</b></td>
+<td style="color:#666;"><b>Due Date</b></td>
+<td style="text-align:right; color:#666;"><b>Amount</b></td>
+</tr>
+
+{% for row in doc.payment_schedule %}
+
+<tr>
+<td>
+    {{ row.description or (row.invoice_portion ~ "%") }}
+</td>
+<td>
+    <td>
+    {% if row.due_date and frappe.utils.format_date(row.due_date, "yyyy-MM-dd") == "2029-01-01" %}
+        TBD
+    {% else %}
+        {{ frappe.utils.format_date(row.due_date) }}
+    {% endif %}
+</td>
+</td>
+<td style="text-align:right; font-weight:500;">
+    {{ row.get_formatted("payment_amount") }}
+</td>
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% endif %}
+
 
 {% if doc.custom_customer_pickup %}
 
@@ -296,8 +338,8 @@ Delivery Terms:
 Customer Pickup – Warehouse Location:
 </div>
 
-<div>727 Hylton Rd, Pennsauken, NJ 08110</div>
-
+<div>1 South Corporate Drive, Riverdale, NJ 07457</div>
+<div>Contact: Ali Karaca +1 (857) 204-5990</div>
 </div>
 
 {% endif %}
