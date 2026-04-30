@@ -1,0 +1,46 @@
+SELECT 
+    soi.item_code AS "Item Code",
+    so.name AS "SO Number",
+    so.customer AS "Customer",
+    so.transaction_date AS "Date",
+
+    soi.qty AS "Order Qty",
+    soi.delivered_qty AS "Delivered Qty",
+
+    CASE 
+        WHEN so.status = 'Closed' THEN 0
+        ELSE GREATEST(soi.qty - soi.delivered_qty, 0)
+    END AS "Pending Qty",
+
+    soi.rate AS "Rate",
+    soi.amount AS "Amount",
+
+    CASE 
+        WHEN so.status = 'Closed' THEN 'Closed'
+        WHEN soi.delivered_qty = 0 THEN 'Open'
+        WHEN soi.delivered_qty < soi.qty THEN 'Partial'
+        WHEN soi.delivered_qty >= soi.qty THEN 'Completed'
+    END AS "Status",
+
+    CASE 
+        WHEN so.status = 'Closed' THEN 100
+        WHEN soi.qty = 0 THEN 0
+        ELSE ROUND((soi.delivered_qty / soi.qty) * 100, 1)
+    END AS "Delivery Percent"
+
+FROM `tabSales Order Item` soi
+
+JOIN `tabSales Order` so 
+    ON soi.parent = so.name
+
+LEFT JOIN `tabItem Price` ip 
+    ON ip.item_code = soi.item_code
+    AND ip.price_list = 'Reference Price'
+
+WHERE 
+    so.docstatus = 1
+    AND so.customer = %(customer)s
+    AND so.transaction_date BETWEEN %(from_date)s AND %(to_date)s
+
+ORDER BY 
+    so.transaction_date DESC

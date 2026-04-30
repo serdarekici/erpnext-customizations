@@ -9,30 +9,26 @@ SELECT
     END AS Warehouse,
     b.actual_qty AS in_Stock,
     b.ordered_qty AS Our_PO_Total,
-    COALESCE(so.total_customer_po,0) AS Reserved_Cust_PO_Total,
-    GREATEST(b.actual_qty - COALESCE(so.total_customer_po,0), 0) AS Available_In_Stock,
+    COALESCE(so.total_customer_po, 0) AS Reserved_Cust_PO_Total,
+    GREATEST(b.actual_qty - COALESCE(so.total_customer_po, 0), 0) AS Available_In_Stock,
     FORMAT(ip.price_list_rate, 2) AS Reference_Price,
     po.shipment AS Shipment
-
 FROM
     `tabBin` b
-
 INNER JOIN
     `tabWarehouse` w
     ON w.name = b.warehouse
     AND w.disabled = 0
-
 LEFT JOIN
     `tabItem` i
     ON b.item_code = i.name
-
-LEFT JOIN
-    `tabItem Price` ip
-    ON ip.item_code = i.name
-    AND ip.price_list = 'Reference Price'
-
-LEFT JOIN
-(
+LEFT JOIN (
+    SELECT item_code, MAX(price_list_rate) AS price_list_rate
+    FROM `tabItem Price`
+    WHERE price_list = 'Reference Price'
+    GROUP BY item_code
+) ip ON ip.item_code = i.name
+LEFT JOIN (
     SELECT
         poi.item_code,
         poi.warehouse,
@@ -51,12 +47,10 @@ LEFT JOIN
 ) po
     ON po.item_code = b.item_code
     AND po.warehouse = b.warehouse
-
-LEFT JOIN
-(
+LEFT JOIN (
     SELECT
         soi.item_code,
-        SUM(GREATEST(soi.qty - soi.delivered_qty,0)) AS total_customer_po
+        SUM(GREATEST(soi.qty - soi.delivered_qty, 0)) AS total_customer_po
     FROM
         `tabSales Order Item` soi
     INNER JOIN
@@ -64,11 +58,10 @@ LEFT JOIN
         ON so.name = soi.parent
     WHERE
         so.docstatus = 1
-        AND so.status NOT IN ('Closed','Completed','Cancelled')
+        AND so.status NOT IN ('Closed', 'Completed', 'Cancelled')
     GROUP BY
         soi.item_code
 ) so
     ON so.item_code = b.item_code
-
 ORDER BY
     b.item_code, b.warehouse
